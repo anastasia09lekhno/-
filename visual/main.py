@@ -1,7 +1,7 @@
 import os
 import csv
 import subprocess
-import git
+import zlib
 
 
 def read_config(config_file):
@@ -17,12 +17,50 @@ def read_config(config_file):
     print(f"Считанная конфигурация: {config}")
     return config['path_to_plantuml'], config['repo_path'], config['output_path']
 
-
 def get_commits(repo_path):
-    repo = git.Repo(repo_path)
-    branch_name = repo.active_branch.name  # Получаем имя активной ветки
-    commits = list(repo.iter_commits(branch_name))
+    """
+    Получает список коммитов в активной ветке заданного репозитория, используя только стандартные команды Python.
+    """
+    # Определяем путь к .git директории
+    git_dir = os.path.join(repo_path, ".git")
+    
+    # Находим путь к файлу активной ветки (например, main)
+    head_path = os.path.join(git_dir, "refs", "heads", "main")  # Замените 'main' на нужное имя ветки
+    
+    try:
+        # Считываем последний коммит из файла ветки
+        with open(head_path, "r") as f:
+            commit_hash = f.read().strip()
+    except FileNotFoundError:
+        print("Файл ветки не найден. Проверьте имя ветки и путь.")
+        return []
+
+    commits = []
+
+    # Обходим историю коммитов
+    while commit_hash:
+        commits.append(commit_hash)
+
+        # Формируем путь к объекту коммита в папке .git/objects/
+        object_dir = os.path.join(git_dir, "objects", commit_hash[:2])
+        object_path = os.path.join(object_dir, commit_hash[2:])
+
+        try:
+            # Читаем и распаковываем объект коммита
+            with open(object_path, "rb") as f:
+                decompressed_data = zlib.decompress(f.read()).decode()
+        except FileNotFoundError:
+            print(f"Файл объекта коммита {commit_hash} не найден.")
+            break
+
+        # Ищем родительский коммит (если есть)
+        parent_line = next((line for line in decompressed_data.split("\n") if line.startswith("parent ")), None)
+        
+        # Если найден, то обновляем `commit_hash` на хеш родительского коммита
+        commit_hash = parent_line.split()[1] if parent_line else None
+
     return commits
+
 
 
 def generate_plantuml(commits):
