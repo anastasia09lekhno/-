@@ -1,0 +1,10 @@
+title = "Simple Example"
+
+[owner]
+name = "Alice"
+age = 30
+
+[database]
+enabled = true
+ports = [5432, 5433, 5434]
+data = ["value1", "value2"]

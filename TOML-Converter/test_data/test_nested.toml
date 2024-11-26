@@ -1,0 +1,13 @@
+title = "Nested Example"
+
+[owner]
+name = "Bob"
+contact = { email = "bob@example.com", phone = "123-456-7890" }
+
+[servers.alpha]
+ip = "192.168.1.1"
+role = "frontend"
+
+[servers.beta]
+ip = "192.168.1.2"
+role = "backend"
