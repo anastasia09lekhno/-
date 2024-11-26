@@ -5,21 +5,23 @@ from config_converter.parser import parse_toml
 
 class TestConverter(unittest.TestCase):
     def test_simple_toml(self):
-        # Входные данные TOML
+        # Г‚ГµГ®Г¤Г­Г»ГҐ Г¤Г Г­Г­Г»ГҐ TOML
         toml_data = """
         [server]
         ip = "127.0.0.1"
         port = 8080
+        port2 = "|port+1|"
+        
         """
-        # Ожидаемый результат
+        # ГЋГ¦ГЁГ¤Г ГҐГ¬Г»Г© Г°ГҐГ§ГіГ«ГјГІГ ГІ
         expected_output = "( server (ip [[127.0.0.1]] port 8080 ) )"
 
-        # Парсим TOML
+        # ГЏГ Г°Г±ГЁГ¬ TOML
         parsed_data = parse_toml(toml_data)
-        # Конвертируем в целевой формат
+        # ГЉГ®Г­ГўГҐГ°ГІГЁГ°ГіГҐГ¬ Гў Г¶ГҐГ«ГҐГўГ®Г© ГґГ®Г°Г¬Г ГІ
         output = convert_to_custom_language(parsed_data)
 
-        # Сравнение результата с ожидаемым
+        # Г‘Г°Г ГўГ­ГҐГ­ГЁГҐ Г°ГҐГ§ГіГ«ГјГІГ ГІГ  Г± Г®Г¦ГЁГ¤Г ГҐГ¬Г»Г¬
         self.assertEqual(output, expected_output)
 
 
