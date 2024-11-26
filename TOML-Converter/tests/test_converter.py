@@ -11,7 +11,7 @@ class TestConverter(unittest.TestCase):
         ip = "127.0.0.1"
         port = 8080
         port2 = "|port+1|"
-        
+        '(server'(port 8080)'(port2 8081))
         """
         # Îæèäàåìûé ðåçóëüòàò
         expected_output = "( server (ip [[127.0.0.1]] port 8080 ) )"
