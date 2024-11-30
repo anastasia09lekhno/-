@@ -1,23 +1,33 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.11.35222.181
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "main", "main\main.pyproj", "{87EA0984-AE2B-4C4F-AE24-0ACAD02251B0}"
-EndProject
-Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{87EA0984-AE2B-4C4F-AE24-0ACAD02251B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{87EA0984-AE2B-4C4F-AE24-0ACAD02251B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {8E45B52F-84B3-43B9-9CCF-DFD7BA2B8A2F}
-	EndGlobalSection
-EndGlobal
+import sys
+from assembler import Assembler
+from interpreter import Interpreter
+
+def main():
+    if len(sys.argv) < 3:
+        print("Использование:")
+        print("  python main.py assembler <input.asm> <output.bin> [log.yaml]")
+        print("  python main.py interpreter <binary_file> <memory_range> <output.yaml>")
+        sys.exit(1)
+
+    mode = sys.argv[1]
+
+    if mode == "assembler":
+        input_file = sys.argv[2]
+        output_file = sys.argv[3]
+        log_file = sys.argv[4] if len(sys.argv) > 4 else None
+        assembler = Assembler(input_file, output_file, log_file)
+        assembler.assemble()
+
+    elif mode == "interpreter":
+        binary_file = sys.argv[2]
+        memory_range = sys.argv[3]
+        output_file = sys.argv[4]
+        start, end = map(int, memory_range.split('-'))
+        interpreter = Interpreter(binary_file, start, end, output_file)
+        interpreter.interpret()
+
+    else:
+        print("Неверный режим. Используйте 'assembler' или 'interpreter'.")
+
+if __name__ == "__main__":
+    main()
