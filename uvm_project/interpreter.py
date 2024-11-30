@@ -1,23 +1,41 @@
 import yaml
 
 class Interpreter:
-    def __init__(self, binary_file, start, end, memory_file):
+    def __init__(self, binary_file, start, end, output_file):
         self.binary_file = binary_file
-        self.memory = [0] * 1024  # Эмуляция памяти размером 1024 байта
         self.start = start
         self.end = end
-        self.memory_file = memory_file
+        self.output_file = output_file
+        self.memory = [0] * 1024
 
     def interpret(self):
-        with open(self.binary_file, "rb") as file:
-            binary_data = file.read()
-        
-        # Эмуляция выполнения команд
-        self.memory[352] = 346  # LOAD
-        self.memory[511] = self.memory[112 + 71]  # READ
-        self.memory[27 + 148] = 883  # WRITE
-        self.memory[810] = 188  # BSWAP
+        with open(self.binary_file, 'rb') as f:
+            binary_data = f.read()
 
-        # Запись состояния памяти в YAML
-        with open(self.memory_file, "w") as file:
-            yaml.dump({"memory": self.memory[self.start:self.end+1]}, file, default_flow_style=False, allow_unicode=True)
+        pc = 0  # РџСЂРѕРіСЂР°РјРјРЅС‹Р№ СЃС‡РµС‚С‡РёРє
+        while pc < len(binary_data):
+            command = binary_data[pc:pc + 4]
+            pc += 4
+            self.execute_command(command)
+
+        self.dump_memory()
+
+    def execute_command(self, command):
+        opcode = (command[0] & 0xFC) >> 2
+        if opcode == 82:  # LOAD
+            addr = ((command[0] & 0x3) << 10) | (command[1] << 2) | (command[2] >> 6)
+            value = ((command[2] & 0x3F) << 8) | command[3]
+            self.memory[addr] = value
+        elif opcode == 22:  # BSWAP
+            addr_src = ((command[0] & 0x3) << 10) | (command[1] << 2) | (command[2] >> 6)
+            addr_dest = ((command[2] & 0x3F) << 8) | command[3]
+            value = self.memory[addr_src]
+            swapped = ((value & 0xFF) << 8) | ((value >> 8) & 0xFF)
+            self.memory[addr_dest] = swapped
+        else:
+            raise ValueError(f"РќРµРёР·РІРµСЃС‚РЅС‹Р№ opcode: {opcode}")
+
+    def dump_memory(self):
+        memory_dump = {f"address_{i}": self.memory[i] for i in range(self.start, self.end + 1)}
+        with open(self.output_file, 'w') as f:
+            yaml.dump(memory_dump, f)
