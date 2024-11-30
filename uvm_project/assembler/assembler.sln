@@ -1,23 +1,93 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.11.35222.181
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "assembler", "assembler\assembler.pyproj", "{76A95F0F-5CA8-4D90-91EC-4552C7391FDD}"
-EndProject
-Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{76A95F0F-5CA8-4D90-91EC-4552C7391FDD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{76A95F0F-5CA8-4D90-91EC-4552C7391FDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {232DBE10-3D0A-4E48-BB15-11E06F88888B}
-	EndGlobalSection
-EndGlobal
+﻿import yaml
+
+class Assembler:
+    def __init__(self, input_file, output_file, log_file=None):
+        self.input_file = input_file
+        self.output_file = output_file
+        self.log_file = log_file
+
+    def assemble(self):
+        instructions = []
+        with open(self.input_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                instruction = self.parse_command(line)
+                instructions.append(instruction)
+
+        # Сохраняем бинарный файл
+        with open(self.output_file, 'wb') as f:
+            for instr in instructions:
+                f.write(instr['binary'])
+
+        # Сохраняем лог (если указан)
+        if self.log_file:
+            with open(self.log_file, 'w') as f:
+                yaml.dump(instructions, f, default_flow_style=False, allow_unicode=True)
+
+    def parse_command(self, line):
+        parts = line.split()
+        mnemonic = parts[0]
+
+        if mnemonic == "LOAD":
+            a = int(parts[1])
+            b = int(parts[2])
+            c = int(parts[3])
+            binary = ((a & 0x7F) << 25) | ((b & 0xFFF) << 13) | (c & 0x3FF)
+            return {
+                "mnemonic": "LOAD",
+                "A": a,
+                "B": b,
+                "C": c,
+                "binary": binary.to_bytes(4, 'big')
+            }
+
+        elif mnemonic == "READ":
+            a = int(parts[1])
+            b = int(parts[2])
+            c = int(parts[3])
+            d = int(parts[4])
+            binary = ((a & 0x7F) << 25) | ((b & 0xFFF) << 13) | ((c & 0xFFF) << 1) | ((d & 0xFFF) >> 8)
+            binary = binary.to_bytes(6, 'big')
+            return {
+                "mnemonic": "READ",
+                "A": a,
+                "B": b,
+                "C": c,
+                "D": d,
+                "binary": binary
+            }
+
+        elif mnemonic == "WRITE":
+            a = int(parts[1])
+            b = int(parts[2])
+            c = int(parts[3])
+            d = int(parts[4])
+            binary = ((a & 0x7F) << 25) | ((b & 0xFFF) << 13) | ((c & 0x3FF) << 3) | ((d & 0xFFF) << 1)
+            binary = binary.to_bytes(6, 'big')
+            return {
+                "mnemonic": "WRITE",
+                "A": a,
+                "B": b,
+                "C": c,
+                "D": d,
+                "binary": binary
+            }
+
+        elif mnemonic == "BSWAP":
+            a = int(parts[1])
+            b = int(parts[2])
+            c = int(parts[3])
+            binary = ((a & 0x7F) << 25) | ((b & 0xFFF) << 13) | ((c & 0xFFF) << 1)
+            return {
+                "mnemonic": "BSWAP",
+                "A": a,
+                "B": b,
+                "C": c,
+                "binary": binary.to_bytes(4, 'big')
+            }
+
+        else:
+            raise ValueError(f"Неизвестная команда: {mnemonic}")
+
