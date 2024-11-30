@@ -1,23 +1,62 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.11.35222.181
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "interpreter", "interpreter\interpreter.pyproj", "{E13B07CE-ED11-4E70-956E-B07389483FA2}"
-EndProject
-Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{E13B07CE-ED11-4E70-956E-B07389483FA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E13B07CE-ED11-4E70-956E-B07389483FA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {95DEEA1F-406F-4D98-945C-4CD159388D9B}
-	EndGlobalSection
-EndGlobal
+﻿import yaml
+
+class Interpreter:
+    def __init__(self, binary_file, start, end, output_file):
+        self.binary_file = binary_file
+        self.start = start
+        self.end = end
+        self.output_file = output_file
+        self.memory = [0] * 1024
+
+    def interpret(self):
+        with open(self.binary_file, 'rb') as f:
+            data = f.read()
+
+        i = 0
+        while i < len(data):
+            if data[i] & 0xFC == 0x52:  # LOAD
+                self.execute_command(data[i:i+4])
+                i += 4
+            elif data[i] & 0xFC == 0x93:  # READ or WRITE
+                self.execute_command(data[i:i+6])
+                i += 6
+            elif data[i] & 0xFC == 0x16:  # BSWAP
+                self.execute_command(data[i:i+4])
+                i += 4
+            else:
+                raise ValueError(f"Неизвестная команда: {data[i]}")
+        self.dump_memory()
+
+    def execute_command(self, command):
+        opcode = (command[0] & 0xFC) >> 2
+
+        if opcode == 82:  # LOAD
+            addr = ((command[0] & 0x3) << 10) | (command[1] << 2) | (command[2] >> 6)
+            value = ((command[2] & 0x3F) << 8) | command[3]
+            self.memory[addr] = value
+
+        elif opcode == 22:  # BSWAP
+            addr_src = ((command[0] & 0x3) << 10) | (command[1] << 2) | (command[2] >> 6)
+            addr_dest = ((command[2] & 0x3F) << 8) | command[3]
+            value = self.memory[addr_src]
+            swapped = ((value & 0xFF) << 8) | ((value >> 8) & 0xFF)
+            self.memory[addr_dest] = swapped
+
+        elif opcode == 19:  # READ
+            addr = ((command[0] & 0x3) << 10) | (command[1] << 2) | (command[2] >> 6)
+            base_addr = ((command[2] & 0x3F) << 8) | command[3]
+            offset = (command[4] << 4) | (command[5] >> 4)
+            source_addr = self.memory[base_addr] + offset
+            self.memory[addr] = self.memory[source_addr]
+
+        elif opcode == 31:  # WRITE
+            base_addr = ((command[0] & 0x3) << 10) | (command[1] << 2) | (command[2] >> 6)
+            offset = (command[2] & 0x3F) << 8 | command[3]
+            dest_addr = self.memory[base_addr] + offset
+            value = self.memory[((command[4] & 0x3F) << 8) | command[5]]
+            self.memory[dest_addr] = value
+
+    def dump_memory(self):
+        memory_dump = {f"address_{i}": self.memory[i] for i in range(self.start, self.end + 1)}
+        with open(self.output_file, 'w') as f:
+            yaml.dump(memory_dump, f)
