@@ -1,18 +1,12 @@
-- instruction:
-    A: 82
-    B: 352
-    C: 346
-- instruction:
-    A: 19
-    B: 511
-    C: 112
-    D: 71
-- instruction:
-    A: 31
-    B: 27
-    C: 148
-    D: 883
-- instruction:
-    A: 22
-    B: 810
-    C: 188
+- mnemonic: LOAD
+  A: 82
+  B: 100
+  C: 4660
+  binary: !!binary |
+    UyCgQA==
+- mnemonic: BSWAP
+  A: 22
+  B: 100
+  C: 200
+  binary: !!binary |
+    Fplh
