@@ -1,23 +1,54 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.11.35222.181
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "utils", "utils\utils.pyproj", "{D5CA0E95-9A9A-4773-AE26-44CE9FEBF868}"
-EndProject
-Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{D5CA0E95-9A9A-4773-AE26-44CE9FEBF868}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D5CA0E95-9A9A-4773-AE26-44CE9FEBF868}.Release|Any CPU.ActiveCfg = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {36A0BEFA-4BC5-45D5-B3E0-FDF73CA9850B}
-	EndGlobalSection
-EndGlobal
+import yaml
+
+def parse_command(binary, command_size):
+    """
+    Разбирает бинарную команду на поля A, B, C, D.
+    """
+    A = binary[0] & 0x7F  # Первые 7 бит
+    B = ((binary[0] >> 7) | (binary[1] << 1)) & 0xFFF  # Биты 7-18
+    if command_size == 4:  # Команды с 3 полями
+        C = ((binary[2]) | (binary[3] << 8)) & 0x3FF  # Биты 19-28
+        return A, B, C, None
+    elif command_size == 6:  # Команды с 4 полями
+        C = ((binary[2]) | (binary[3] << 8)) & 0xFFF  # Биты 19-30
+        D = ((binary[4]) | (binary[5] << 8)) & 0xFFF  # Биты 31-40
+        return A, B, C, D
+    else:
+        raise ValueError("Invalid command size")
+
+def format_command(mnemonic, A, B, C=None, D=None):
+    """
+    Формирует бинарную команду из полей.
+    """
+    if D is None:  # Команды с 3 полями
+        command = [
+            (A & 0x7F) | ((B & 0x1F) << 7),
+            (B >> 1) & 0xFF,
+            C & 0xFF,
+            (C >> 8) & 0xFF
+        ]
+    else:  # Команды с 4 полями
+        command = [
+            (A & 0x7F) | ((B & 0x1F) << 7),
+            (B >> 1) & 0xFF,
+            C & 0xFF,
+            (C >> 8) & 0xFF,
+            D & 0xFF,
+            (D >> 8) & 0xFF
+        ]
+    return bytes(command)
+
+def yaml_dump(data, filepath):
+    """
+    Сохраняет данные в YAML файл.
+    """
+    with open(filepath, 'w', encoding='utf-8') as f:
+        yaml.dump(data, f, allow_unicode=True)
+
+def yaml_load(filepath):
+    """
+    Загружает данные из YAML файла.
+    """
+    with open(filepath, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f)
+
