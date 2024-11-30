@@ -7,29 +7,59 @@ class Assembler:
         self.input_file = input_file
         self.output_file = output_file
         self.log_file = log_file
-        self.log_data = []
+        self.commands = []
 
     def assemble(self):
-        # Пример: добавление инструкции в лог
-        self.log_data.append({"instruction": {"A": 82, "B": 352, "C": 346}})
-        self.log_data.append({"instruction": {"A": 19, "B": 511, "C": 112, "D": 71}})
-        self.log_data.append({"instruction": {"A": 31, "B": 27, "C": 148, "D": 883}})
-        self.log_data.append({"instruction": {"A": 22, "B": 810, "C": 188}})
+        with open(self.input_file, 'r') as f:
+            lines = f.readlines()
 
-        # Сохранение логов в YAML
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue  # РџСЂРѕРїСѓСЃРєР°РµРј РєРѕРјРјРµРЅС‚Р°СЂРёРё Рё РїСѓСЃС‚С‹Рµ СЃС‚СЂРѕРєРё
+
+            command = self.parse_command(line)
+            self.commands.append(command)
+
+        # РЎРѕС…СЂР°РЅСЏРµРј Р±РёРЅР°СЂРЅС‹Р№ С„Р°Р№Р»
+        with open(self.output_file, 'wb') as f:
+            for cmd in self.commands:
+                f.write(cmd['binary'])
+
+        # Р›РѕРіРёСЂСѓРµРј РєРѕРјР°РЅРґС‹
         if self.log_file:
-            with open(self.log_file, "w") as file:
-                yaml.dump(self.log_data, file, default_flow_style=False, allow_unicode=True)
+            with open(self.log_file, 'w') as f:
+                yaml.dump(self.commands, f)
 
-        # Эмуляция преобразования в бинарный формат
-        binary_data = bytearray([
-            0x52, 0xB0, 0xD0, 0x0A,  # LOAD
-            0x93, 0xFF, 0x80, 0x83, 0x23, 0x00,  # READ
-            0x9F, 0x0D, 0xA0, 0x64, 0x6E, 0x00,  # WRITE
-            0x16, 0x95, 0xE1, 0x05  # BSWAP
-        ])
-        
-        # Запись бинарного файла
-        with open(self.output_file, "wb") as f:
-            f.write(binary_data)
+    def parse_command(self, line):
+        parts = line.split()
+        mnemonic = parts[0]
+
+        if mnemonic == "LOAD":
+            a = int(parts[1])
+            b = int(parts[2])
+            c = int(parts[3])
+            binary = ((a & 0x7F) << 25) | ((b & 0xFFF) << 13) | (c & 0x3FF)
+            return {
+                "mnemonic": "LOAD",
+                "A": a,
+                "B": b,
+                "C": c,
+                "binary": binary.to_bytes(4, 'big')
+            }
+        elif mnemonic == "BSWAP":
+            a = int(parts[1])
+            b = int(parts[2])
+            c = int(parts[3])
+            binary = ((a & 0x7F) << 25) | ((b & 0xFFF) << 13) | ((c & 0xFFF) << 1)
+            return {
+                "mnemonic": "BSWAP",
+                "A": a,
+                "B": b,
+                "C": c,
+                "binary": binary.to_bytes(4, 'big')
+            }
+        else:
+            raise ValueError(f"РќРµРёР·РІРµСЃС‚РЅР°СЏ РєРѕРјР°РЅРґР°: {mnemonic}")
+   
 
